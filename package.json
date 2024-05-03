@@ -1,6 +1,6 @@
 {
   "name": "@avnu/gasless-sdk",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "TypeScript SDK to easily provide gasless transactions to your users",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -9,7 +9,11 @@
   "types": "dist/index.d.ts",
   "license": "MIT",
   "author": "AVNU",
-  "keywords": ["starknet","l2","gasless"],
+  "keywords": [
+    "starknet",
+    "l2",
+    "gasless"
+  ],
   "homepage": "https://github.com/avnu-labs/gasless-sdk#readme",
   "repository": "https://github.com/avnu-labs/gasless-sdk.git",
   "bugs": {
