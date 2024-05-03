@@ -25,10 +25,7 @@ export interface GasTokenPrice {
 
 export interface ExecuteCallsOptions {
   gasTokenAddress: string;
-  maxGasTokenAmount?: bigint;
-  estimatedGasFees?: bigint;
-  gasTokenPrices?: GasTokenPrice[];
-  maxFeesOverhead?: number;
+  maxGasTokenAmount: bigint;
 }
 
 export interface GaslessOptions {

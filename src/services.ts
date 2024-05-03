@@ -1,4 +1,4 @@
-import { parseUnits, toBeHex } from 'ethers';
+import { toBeHex } from 'ethers';
 import { AccountInterface, Call, ec, hash, Signature, TypedData } from 'starknet';
 import { BASE_URL } from './constants';
 import {
@@ -160,20 +160,15 @@ const fetchExecuteTransaction = (
  * @param gasTokenAddress The gas token address that will be used to pay the gas fees
  * @param maxGasTokenAmount The maximum amount of gas token that the user is willing to spend
  * @param estimatedGasFees The estimated gas fees amount in ETH
- * @param gasTokenPrices The list of token prices. This list can be retrieved using `fetchGasTokenPrices`
- * @param maxFeesOverhead The overhead of the gas fees. When estimating a tx to 0.0001 ETH, the user will approve to spend 0.0002 ETH max when overhead is 1 (100%) and 0.0004 when overhead is 4 (400%).
  * @param options Optional options.
  * @returns Promise<InvokeSwapResponse>
  */
 const executeCalls = async (
   account: AccountInterface,
   calls: Call[],
-  { gasTokenAddress, maxGasTokenAmount, estimatedGasFees, gasTokenPrices, maxFeesOverhead = 3 }: ExecuteCallsOptions,
+  { gasTokenAddress, maxGasTokenAmount }: ExecuteCallsOptions,
   options?: GaslessOptions,
 ): Promise<InvokeResponse> => {
-  // if (estimatedGasFees && gasTokenPrices && gasTokenAddress) {
-  //   maxGasTokenAmount = computeMaxGasTokenAmount(gasTokenAddress, estimatedGasFees, gasTokenPrices, maxFeesOverhead);
-  // }
   if (maxGasTokenAmount === undefined) {
     throw Error(`Provide maxGasTokenAmount or estimatedGasFees, gasTokenPrices and gasTokenAddress`);
   }
