@@ -1,6 +1,6 @@
+import { FC, ReactNode } from 'react';
 import { sepolia } from '@starknet-react/chains';
 import { InjectedConnector, publicProvider, StarknetConfig } from '@starknet-react/core';
-import { FC, ReactNode } from 'react';
 
 interface Props {
   children: ReactNode;
