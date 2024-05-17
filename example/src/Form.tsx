@@ -1,18 +1,20 @@
-import { useAccount, useNetwork, useProvider } from '@starknet-react/core';
 import { FC, useCallback, useEffect, useState } from 'react';
-import Connect from './Connect';
-import { AccountInterface, Call, EstimateFeeResponse, stark, transaction } from 'starknet';
 import {
   executeCalls,
   fetchAccountCompatibility,
+  fetchAccountsRewards,
   fetchGasTokenPrices,
   GaslessCompatibility,
   GaslessOptions,
   GasTokenPrice,
   getGasFeesInGasToken,
+  PaymasterReward,
   SEPOLIA_BASE_URL,
 } from '@avnu/gasless-sdk';
+import { useAccount, useNetwork, useProvider } from '@starknet-react/core';
 import { formatUnits } from 'ethers';
+import { AccountInterface, Call, EstimateFeeResponse, stark, transaction } from 'starknet';
+import Connect from './Connect';
 
 const options: GaslessOptions = { baseUrl: SEPOLIA_BASE_URL };
 const initialValue: Call[] = [
@@ -38,6 +40,7 @@ const Form: FC = () => {
   const { provider } = useProvider();
   const [loading, setLoading] = useState(false);
   const [tx, setTx] = useState<string>();
+  const [paymasterRewards, setPaymasterRewards] = useState<PaymasterReward[]>([]);
   const [calls, setCalls] = useState(JSON.stringify(initialValue, null, 2));
   const [gasTokenPrices, setGasTokenPrices] = useState<GasTokenPrice[]>([]);
   const [gasTokenPrice, setGasTokenPrice] = useState<GasTokenPrice>();
@@ -47,7 +50,8 @@ const Form: FC = () => {
 
   useEffect(() => {
     if (!account) return;
-    fetchAccountCompatibility(account.address).then(setGaslessCompatibility);
+    fetchAccountCompatibility(account.address, options).then(setGaslessCompatibility);
+    fetchAccountsRewards(account.address, { ...options, protocol: 'gasless-sdk' }).then(setPaymasterRewards);
   }, [account]);
 
   // The account.estimateInvokeFee doesn't work...
@@ -90,14 +94,14 @@ const Form: FC = () => {
   }, [calls, account, gasTokenPrice, gaslessCompatibility, estimateCalls]);
 
   const onClickExecute = async () => {
-    if (!account || !gasTokenPrice) return;
+    if (!account) return;
     setLoading(true);
     setTx(undefined);
     return executeCalls(
       account,
       JSON.parse(calls),
       {
-        gasTokenAddress: gasTokenPrice.tokenAddress,
+        gasTokenAddress: gasTokenPrice?.tokenAddress,
         maxGasTokenAmount,
       },
       options,
@@ -106,8 +110,9 @@ const Form: FC = () => {
         setTx(response.transactionHash);
         setLoading(false);
       })
-      .catch(() => {
+      .catch((error) => {
         setLoading(false);
+        console.error(error);
       });
   };
 
@@ -133,12 +138,27 @@ const Form: FC = () => {
         style={{ minHeight: '500px', minWidth: '1000px' }}
       />
       <div>
-        <p>Gas tokens</p>
-        {gasTokenPrices.map((price) => (
-          <button disabled={price.tokenAddress === gasTokenPrice?.tokenAddress} onClick={() => setGasTokenPrice(price)}>
-            {price.tokenAddress}
-          </button>
-        ))}
+        <p>
+          <strong>Paymaster rewards</strong>
+        </p>
+        {paymasterRewards.length == 0 ? <p>No reward</p> : <p>{JSON.stringify(paymasterRewards)}</p>}
+      </div>
+      <div>
+        <p>
+          <strong>Gas tokens</strong>
+        </p>
+        {paymasterRewards.length > 0 ? (
+          <p>No gas fees to pay. You have a reward.</p>
+        ) : (
+          gasTokenPrices.map((price) => (
+            <button
+              disabled={price.tokenAddress === gasTokenPrice?.tokenAddress}
+              onClick={() => setGasTokenPrice(price)}
+            >
+              {price.tokenAddress}
+            </button>
+          ))
+        )}
       </div>
       {tx && (
         <a href={`https://sepolia.voyager.online/tx/${tx}`} target={'_blank'} rel='noreferrer'>
@@ -146,13 +166,16 @@ const Form: FC = () => {
         </a>
       )}
       {errorMessage && <p style={{ color: 'red' }}>{errorMessage}</p>}
-      {!gasTokenPrice && <p>Select a gas token</p>}
+      {paymasterRewards.length == 0 && !gasTokenPrice && <p>Select a gas token</p>}
       {maxGasTokenAmount !== undefined && gasTokenPrice !== undefined && (
         <p>Max gas fees in gas token: {formatUnits(maxGasTokenAmount, gasTokenPrice.decimals)}</p>
       )}
       <div>
         {account && (
-          <button disabled={!isValidJSON(calls) || loading || !gasTokenPrice} onClick={onClickExecute}>
+          <button
+            disabled={!isValidJSON(calls) || loading || (!gasTokenPrice && paymasterRewards.length == 0)}
+            onClick={onClickExecute}
+          >
             {loading ? 'Loading' : 'Execute'}
           </button>
         )}

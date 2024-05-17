@@ -23,9 +23,43 @@ export interface GasTokenPrice {
   decimals: number;
 }
 
+export interface PaymasterReward {
+  // Reward's creation date
+  date: Date;
+  // The user's address
+  address: string;
+  // The company that will pay the gas fees
+  sponsor: string;
+  // The name of the company's campaign
+  campaign: string;
+  // The protocol where the reward can be used
+  protocol: string | undefined;
+  // The number of free transaction
+  freeTx: number;
+  // The number of remaining transactions
+  remainingTx: number;
+  // Reward's expiration date
+  expirationDate: Date | undefined;
+  // The list of whitelisted calls
+  whitelistedCalls: WhitelistedCall[];
+}
+
+export interface WhitelistedCall {
+  // The value can be '*' if all contracts are whitelisted or can be the contract address (hex format)
+  contractAddress: string;
+  // The value can be '*' if all entrypoint are whitelisted or can be the entrypoint name (string format)
+  entrypoint: string;
+}
+
+export interface AccountsRewardsOptions {
+  sponsor?: string;
+  campaign?: string;
+  protocol?: string;
+}
+
 export interface ExecuteCallsOptions {
-  gasTokenAddress: string;
-  maxGasTokenAmount: bigint;
+  gasTokenAddress?: string;
+  maxGasTokenAmount?: bigint;
 }
 
 export interface GaslessOptions {

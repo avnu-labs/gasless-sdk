@@ -1,13 +1,16 @@
 import { toBeHex } from 'ethers';
+import qs from 'qs';
 import { AccountInterface, Call, ec, hash, Signature, TypedData } from 'starknet';
 import { BASE_URL } from './constants';
 import {
+  AccountsRewardsOptions,
   ExecuteCallsOptions,
   GaslessCompatibility,
   GaslessOptions,
   GaslessStatus,
   GasTokenPrice,
   InvokeResponse,
+  PaymasterReward,
   RequestError,
 } from './types';
 
@@ -58,7 +61,7 @@ const parseResponse = <T>(response: Response, apiPublicKey?: string): Promise<T>
  * @param options Optional options
  */
 const fetchGaslessStatus = (options?: GaslessOptions): Promise<GaslessStatus> =>
-  fetch(`${baseUrl(options)}/gasless/v1/status`, getRequest(options)).then((response) =>
+  fetch(`${baseUrl(options)}/paymaster/v1/status`, getRequest(options)).then((response) =>
     parseResponse<GaslessStatus>(response, options?.apiPublicKey),
   );
 
@@ -69,7 +72,7 @@ const fetchGaslessStatus = (options?: GaslessOptions): Promise<GaslessStatus> =>
  * @param options Optional options
  */
 const fetchAccountCompatibility = (accountAddress: string, options?: GaslessOptions): Promise<GaslessCompatibility> =>
-  fetch(`${baseUrl(options)}/gasless/v1/accounts/${accountAddress}/compatible`, getRequest(options))
+  fetch(`${baseUrl(options)}/paymaster/v1/accounts/${accountAddress}/compatible`, getRequest(options))
     .then((response) => parseResponse<GaslessCompatibility>(response, options?.apiPublicKey))
     .then((response) => ({
       ...response,
@@ -78,11 +81,35 @@ const fetchAccountCompatibility = (accountAddress: string, options?: GaslessOpti
     }));
 
 /**
+ * Fetches the list of user's paymaster rewards.
+ * Rewards are registered by a sponsor. This sponsor will pay account's gas fees.
+ * @param accountAddress The account address
+ * @param options Optional options
+ */
+const fetchAccountsRewards = (
+  accountAddress: string,
+  options?: AccountsRewardsOptions & GaslessOptions,
+): Promise<PaymasterReward[]> => {
+  const queryParams = qs.stringify(
+    {
+      ...(options?.sponsor && { sponsor: options.sponsor }),
+      ...(options?.campaign && { campaign: options.campaign }),
+      ...(options?.protocol && { protocol: options.protocol }),
+    },
+    { arrayFormat: 'repeat' },
+  );
+  return fetch(
+    `${baseUrl(options)}/paymaster/v1/accounts/${accountAddress}/rewards?${queryParams}`,
+    getRequest(options),
+  ).then((response) => parseResponse<PaymasterReward[]>(response, options?.apiPublicKey));
+};
+
+/**
  * Calls API to retrieve gas token prices
  * @param options Optional options
  */
 const fetchGasTokenPrices = (options?: GaslessOptions): Promise<GasTokenPrice[]> =>
-  fetch(`${baseUrl(options)}/gasless/v1/gas-token-prices`, getRequest(options))
+  fetch(`${baseUrl(options)}/paymaster/v1/gas-token-prices`, getRequest(options))
     .then((response) => parseResponse<GasTokenPrice[]>(response, options?.apiPublicKey))
     .then((prices) =>
       prices.map((price) => ({
@@ -95,26 +122,30 @@ const fetchGasTokenPrices = (options?: GaslessOptions): Promise<GasTokenPrice[]>
  * Calls API to retrieve the typed data that the user will have to sign.
  * @param userAddress The user's address
  * @param calls The list of calls that will be executed
- * @param gasTokenAddress The gas token address that will be used to pay the gas fees
- * @param maxGasTokenAmount The maximum amount of gas token that the user is willing to spend
+ * @param gasTokenAddress The gas token address that will be used to pay the gas fees. If null, there is two options:
+ * 1. the user must have a reward compatible with the calls. In this case, the reward's sponsor will pay the gas fees in ETH.
+ * 2. the api-key header must be field. The api-key's owner will be charged for the consumed gas fees in ETH
+ * @param maxGasTokenAmount The maximum amount of gas token that the user is willing to spend. If null, there is two options:
+ * 1. the user must have a reward compatible with the calls. In this case, the reward's sponsor will pay the gas fees in ETH.
+ * 2. the api-key header must be field. The api-key's owner will be charged for the consumed gas fees in ETH
  * @param options Optional options
  * @returns The best quotes
  */
 const fetchBuildTypedData = (
   userAddress: string,
   calls: Call[],
-  gasTokenAddress: string,
-  maxGasTokenAmount: bigint,
+  gasTokenAddress: string | undefined,
+  maxGasTokenAmount: bigint | undefined,
   options?: GaslessOptions,
 ): Promise<TypedData> =>
   fetch(
-    `${baseUrl(options)}/gasless/v1/build-typed-data`,
+    `${baseUrl(options)}/paymaster/v1/build-typed-data`,
     postRequest(
       {
         userAddress,
         calls,
         gasTokenAddress,
-        maxGasTokenAmount: toBeHex(maxGasTokenAmount),
+        ...(maxGasTokenAmount !== undefined && { maxGasTokenAmount: toBeHex(maxGasTokenAmount) }),
       },
       options,
     ),
@@ -140,7 +171,7 @@ const fetchExecuteTransaction = (
     signature = [toBeHex(BigInt(signature.r)), toBeHex(BigInt(signature.s))];
   }
   return fetch(
-    `${baseUrl(options)}/gasless/v1/execute`,
+    `${baseUrl(options)}/paymaster/v1/execute`,
     postRequest(
       {
         userAddress,
@@ -157,8 +188,12 @@ const fetchExecuteTransaction = (
  * You can directly provide the maxGasTokenAmount or let us compute it for you by providing estimatedGasFees, gasTokenPrices and maxFeesOverhead
  * @param account The user's account
  * @param calls Calls that will be executed
- * @param gasTokenAddress The gas token address that will be used to pay the gas fees
- * @param maxGasTokenAmount The maximum amount of gas token that the user is willing to spend
+ * @param gasTokenAddress The gas token address that will be used to pay the gas fees. If null, there is two options:
+ * 1. the user must have a reward compatible with the calls. In this case, the reward's sponsor will pay the gas fees in ETH.
+ * 2. the api-key header must be field. The api-key's owner will be charged for the consumed gas fees in ETH
+ * @param maxGasTokenAmount The maximum amount of gas token that the user is willing to spend. If null, there is two options:
+ * 1. the user must have a reward compatible with the calls. In this case, the reward's sponsor will pay the gas fees in ETH.
+ * 2. the api-key header must be field. The api-key's owner will be charged for the consumed gas fees in ETH
  * @param estimatedGasFees The estimated gas fees amount in ETH
  * @param options Optional options.
  * @returns Promise<InvokeSwapResponse>
@@ -169,9 +204,6 @@ const executeCalls = async (
   { gasTokenAddress, maxGasTokenAmount }: ExecuteCallsOptions,
   options?: GaslessOptions,
 ): Promise<InvokeResponse> => {
-  if (maxGasTokenAmount === undefined) {
-    throw Error(`Provide maxGasTokenAmount or estimatedGasFees, gasTokenPrices and gasTokenAddress`);
-  }
   const typedData = await fetchBuildTypedData(account.address, calls, gasTokenAddress, maxGasTokenAmount, options);
   const signature = await account.signMessage(typedData);
   return fetchExecuteTransaction(account.address, JSON.stringify(typedData), signature, options).then((value) => ({
@@ -234,6 +266,7 @@ const getGasFeesInGasToken = (
 export {
   executeCalls,
   fetchAccountCompatibility,
+  fetchAccountsRewards,
   fetchBuildTypedData,
   fetchExecuteTransaction,
   fetchGaslessStatus,
