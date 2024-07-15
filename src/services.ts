@@ -17,13 +17,17 @@ import {
 const baseUrl = (options?: GaslessOptions): string => options?.baseUrl ?? BASE_URL;
 const getRequest = (options?: GaslessOptions): RequestInit => ({
   signal: options?.abortSignal,
-  headers: { ...(options?.apiPublicKey !== undefined && { 'ask-signature': 'true' }) },
+  headers: {
+    ...(options?.apiPublicKey !== undefined && { 'ask-signature': 'true' }),
+    ...(options?.apiKey && { 'api-key': options.apiKey }),
+  },
 });
 const postRequest = (body: unknown, options?: GaslessOptions): RequestInit => ({
   method: 'POST',
   headers: {
     Accept: 'application/json',
     'Content-Type': 'application/json',
+    ...(options?.apiKey && { 'api-key': options.apiKey }),
     ...(options?.apiPublicKey && { 'ask-signature': 'true' }),
   },
   body: JSON.stringify(body),

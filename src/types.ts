@@ -64,6 +64,8 @@ export interface ExecuteCallsOptions {
 
 export interface GaslessOptions {
   baseUrl?: string;
+  // The api key allows you to sponsor the gas fees for your users
+  apiKey?: string;
   abortSignal?: AbortSignal;
   apiPublicKey?: string;
 }
