@@ -72,8 +72,16 @@ export interface GaslessOptions {
 
 export interface RequestError {
   messages: string[];
+  revertError: string | undefined;
 }
 
 export interface InvokeResponse {
   transactionHash: string;
+}
+
+export class ContractError {
+  constructor(
+    public message: string,
+    public revertError: string,
+  ) {}
 }
