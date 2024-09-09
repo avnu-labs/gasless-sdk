@@ -4,6 +4,7 @@ import { AccountInterface, Call, ec, hash, Signature, TypedData } from 'starknet
 import { BASE_URL } from './constants';
 import {
   AccountsRewardsOptions,
+  ContractError,
   ExecuteCallsOptions,
   GaslessCompatibility,
   GaslessOptions,
@@ -37,6 +38,15 @@ const parseResponse = <T>(response: Response, apiPublicKey?: string): Promise<T>
   if (response.status === 400) {
     return response.json().then((error: RequestError) => {
       throw new Error(error.messages[0]);
+    });
+  }
+  if (response.status === 500) {
+    return response.json().then((error: RequestError) => {
+      if (error.messages.length >= 0 && error.messages[0].includes('Contract error')) {
+        throw new ContractError(error.messages[0], error.revertError || '');
+      } else {
+        throw new Error(error.messages[0]);
+      }
     });
   }
   if (response.status > 400) {
