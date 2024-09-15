@@ -5,6 +5,7 @@ import { BASE_URL } from './constants';
 import {
   AccountsRewardsOptions,
   ContractError,
+  DeploymentData,
   ExecuteCallsOptions,
   GaslessCompatibility,
   GaslessOptions,
@@ -142,6 +143,10 @@ const fetchGasTokenPrices = (options?: GaslessOptions): Promise<GasTokenPrice[]>
  * @param maxGasTokenAmount The maximum amount of gas token that the user is willing to spend. If null, there is two options:
  * 1. the user must have a reward compatible with the calls. In this case, the reward's sponsor will pay the gas fees in ETH.
  * 2. the api-key header must be field. The api-key's owner will be charged for the consumed gas fees in ETH
+ * @param accountClassHash Only set this field when the account is not deployed.
+ * When the accountClassHash is defined, the API will not check the gasless compatibility by calling
+ * the supportsInterface entrypoint but will instead look into an internal map.
+ * If the classHash is not supported by the API, please contact us so we can quickly add support.
  * @param options Optional options
  * @returns The best quotes
  */
@@ -151,6 +156,7 @@ const fetchBuildTypedData = (
   gasTokenAddress: string | undefined,
   maxGasTokenAmount: bigint | undefined,
   options?: GaslessOptions,
+  accountClassHash?: string | undefined,
 ): Promise<TypedData> =>
   fetch(
     `${baseUrl(options)}/paymaster/v1/build-typed-data`,
@@ -159,6 +165,7 @@ const fetchBuildTypedData = (
         userAddress,
         calls,
         gasTokenAddress,
+        accountClassHash,
         ...(maxGasTokenAmount !== undefined && { maxGasTokenAmount: toBeHex(maxGasTokenAmount) }),
       },
       options,
@@ -170,6 +177,10 @@ const fetchBuildTypedData = (
  * @param userAddress The user address
  * @param typedData The typed data that the user signed
  * @param signature The typed data's signature
+ * @param deploymentData When this field is set, the paymaster will deploy the user's account
+ * before executing the typed data. To retrieve the deployment data, you can read
+ * https://community.starknet.io/t/snip-deployment-interface-between-dapps-and-wallets/101923.
+ * For now, the paymaster only allows the deployment of account for sponsored transactions.
  * @param options Optional options.
  * @returns The best quotes
  */
@@ -178,6 +189,7 @@ const fetchExecuteTransaction = (
   typedData: string,
   signature: Signature,
   options?: GaslessOptions,
+  deploymentData?: DeploymentData | undefined,
 ): Promise<InvokeResponse> => {
   if (Array.isArray(signature)) {
     signature = signature.map((sig) => toBeHex(BigInt(sig)));
@@ -191,6 +203,12 @@ const fetchExecuteTransaction = (
         userAddress,
         typedData,
         signature,
+        ...(deploymentData && {
+          deploymentData: {
+            ...deploymentData,
+            sigdata: deploymentData.sigdata?.map((sig) => toBeHex(BigInt(sig))),
+          },
+        }),
       },
       options,
     ),
@@ -215,14 +233,24 @@ const fetchExecuteTransaction = (
 const executeCalls = async (
   account: AccountInterface,
   calls: Call[],
-  { gasTokenAddress, maxGasTokenAmount }: ExecuteCallsOptions,
+  { gasTokenAddress, maxGasTokenAmount, deploymentData }: ExecuteCallsOptions,
   options?: GaslessOptions,
 ): Promise<InvokeResponse> => {
-  const typedData = await fetchBuildTypedData(account.address, calls, gasTokenAddress, maxGasTokenAmount, options);
+  const accountClassHash = deploymentData ? deploymentData.class_hash : undefined;
+  const typedData = await fetchBuildTypedData(
+    account.address,
+    calls,
+    gasTokenAddress,
+    maxGasTokenAmount,
+    options,
+    accountClassHash,
+  );
   const signature = await account.signMessage(typedData);
-  return fetchExecuteTransaction(account.address, JSON.stringify(typedData), signature, options).then((value) => ({
-    transactionHash: value.transactionHash,
-  }));
+  return fetchExecuteTransaction(account.address, JSON.stringify(typedData), signature, options, deploymentData).then(
+    (value) => ({
+      transactionHash: value.transactionHash,
+    }),
+  );
 };
 
 const shouldAddValidationOverhead = (

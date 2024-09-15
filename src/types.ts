@@ -57,9 +57,18 @@ export interface AccountsRewardsOptions {
   protocol?: string;
 }
 
+export interface DeploymentData {
+  class_hash: string;
+  salt: string;
+  unique: string;
+  calldata: string[];
+  sigdata?: string[];
+}
+
 export interface ExecuteCallsOptions {
   gasTokenAddress?: string;
   maxGasTokenAmount?: bigint;
+  deploymentData?: DeploymentData;
 }
 
 export interface GaslessOptions {
