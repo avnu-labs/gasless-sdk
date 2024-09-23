@@ -1,6 +1,6 @@
 import { toBeHex } from 'ethers';
 import qs from 'qs';
-import { AccountInterface, Call, ec, hash, Signature, TypedData } from 'starknet';
+import { AccountInterface, Call, CallData, ec, hash, RawArgs, Signature, TypedData } from 'starknet';
 import { BASE_URL } from './constants';
 import {
   AccountsRewardsOptions,
@@ -163,7 +163,7 @@ const fetchBuildTypedData = (
     postRequest(
       {
         userAddress,
-        calls,
+        calls: formatCall(calls),
         gasTokenAddress,
         accountClassHash,
         ...(maxGasTokenAmount !== undefined && { maxGasTokenAmount: toBeHex(maxGasTokenAmount) }),
@@ -171,6 +171,17 @@ const fetchBuildTypedData = (
       options,
     ),
   ).then((response) => parseResponse<TypedData>(response, options?.apiPublicKey));
+
+const formatCall = (calls: Call[]): Call[] =>
+  calls.map((call) => ({
+    contractAddress: call.contractAddress,
+    entrypoint: call.entrypoint,
+    calldata: (Array.isArray(call.calldata) && '__compiled__' in call.calldata
+      ? call.calldata // Calldata type
+      : CallData.compile(call.calldata as RawArgs)
+    ) // RawArgsObject | RawArgsArray type
+      .map((calldata) => toBeHex(calldata)),
+  }));
 
 /**
  * Calls API to execute transaction using the gasless feature
@@ -313,5 +324,6 @@ export {
   fetchExecuteTransaction,
   fetchGaslessStatus,
   fetchGasTokenPrices,
+  formatCall,
   getGasFeesInGasToken,
 };
