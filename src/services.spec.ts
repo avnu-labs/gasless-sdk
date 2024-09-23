@@ -1,8 +1,45 @@
 import { parseUnits } from 'ethers';
-import { getGasFeesInGasToken } from './services';
+import { cairo, Call } from 'starknet';
+import { formatCall, getGasFeesInGasToken } from './services';
 import { GasTokenPrice } from './types';
 
 describe('Gasless services', () => {
+  describe('formatCall', () => {
+    it('should format call', () => {
+      // Given
+      const calls: Call[] = [
+        {
+          entrypoint: 'entrypoing',
+          contractAddress: '0x1887f83f4e26d37a240f36322fc3c9ace5b55e854f3a3090330e0e4b45f757a',
+          calldata: [
+            '2',
+            cairo.tuple('1', 4),
+            cairo.tuple('0xaedcba9876543210fedcba9876543210fedcba9876543210fedcba98765432', 5),
+          ],
+        },
+      ];
+
+      // When
+      const result = formatCall(calls);
+
+      // Then
+      const expected = [
+        {
+          calldata: [
+            '0x02',
+            '0x01',
+            '0x04',
+            '0xaedcba9876543210fedcba9876543210fedcba9876543210fedcba98765432',
+            '0x05',
+          ],
+          contractAddress: '0x1887f83f4e26d37a240f36322fc3c9ace5b55e854f3a3090330e0e4b45f757a',
+          entrypoint: 'entrypoing',
+        },
+      ];
+      expect(result).toStrictEqual(expected);
+    });
+  });
+
   describe('getGasFeesInGasToken', () => {
     const gasTokenPrice: GasTokenPrice = {
       tokenAddress: '0x053c91253bc9682c04929ca02ed00b3e423f6710d2ee7e0d5ebb06f3ecf368a8',
