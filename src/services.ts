@@ -313,7 +313,7 @@ const getGasFeesInGasToken = (
     dataGasConsumedOverhead,
   );
   const gasFeesInGasToken = Number(gasFeesInETH) / Number(gasTokenPrice.priceInETH);
-  return BigInt(~~(gasFeesInGasToken * 10 ** gasTokenPrice.decimals));
+  return BigInt(Math.round(gasFeesInGasToken * 10 ** gasTokenPrice.decimals));
 };
 
 export {
