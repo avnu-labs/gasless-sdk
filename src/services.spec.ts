@@ -94,6 +94,21 @@ describe('Gasless services', () => {
         dataGasConsumedOverhead: BigInt(0x0),
         expected: parseUnits('1.046', 6),
       },
+      {
+        reason: 'validation overhead not 0x0',
+        estimatedGasFeesInETH: BigInt(353689424262),
+        gasCost: BigInt(16540204002),
+        dataGasCost: BigInt(205341397),
+        gasConsumedOverhead: BigInt(0),
+        dataGasConsumedOverhead: BigInt(0),
+        expected: BigInt(1330),
+        selectedGasTokenPrice: {
+          decimals: 6,
+          priceInETH: BigInt(265901307596508),
+          priceInUSD: 1.0014640948007292,
+          tokenAddress: '0x53c91253bc9682c04929ca02ed00b3e423f6710d2ee7e0d5ebb06f3ecf368a8',
+        },
+      },
     ].forEach(
       ({
         estimatedGasFeesInETH,
@@ -103,12 +118,13 @@ describe('Gasless services', () => {
         dataGasCost,
         gasConsumedOverhead,
         dataGasConsumedOverhead,
+        selectedGasTokenPrice,
       }) =>
         it(`should return ${expected} when estimatedGasFeesInETH is ${estimatedGasFeesInETH} and ${reason}`, () => {
           // When
           const result = getGasFeesInGasToken(
             estimatedGasFeesInETH,
-            gasTokenPrice,
+            selectedGasTokenPrice ?? gasTokenPrice,
             gasCost,
             dataGasCost,
             gasConsumedOverhead,
