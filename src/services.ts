@@ -22,6 +22,7 @@ const getRequest = (options?: GaslessOptions): RequestInit => ({
   headers: {
     ...(options?.apiPublicKey !== undefined && { 'ask-signature': 'true' }),
     ...(options?.apiKey && { 'api-key': options.apiKey }),
+    ...options?.customHeaders,
   },
 });
 const postRequest = (body: unknown, options?: GaslessOptions): RequestInit => ({
@@ -31,6 +32,7 @@ const postRequest = (body: unknown, options?: GaslessOptions): RequestInit => ({
     'Content-Type': 'application/json',
     ...(options?.apiKey && { 'api-key': options.apiKey }),
     ...(options?.apiPublicKey && { 'ask-signature': 'true' }),
+    ...options?.customHeaders,
   },
   body: JSON.stringify(body),
 });
