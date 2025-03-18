@@ -77,6 +77,7 @@ export interface GaslessOptions {
   apiKey?: string;
   abortSignal?: AbortSignal;
   apiPublicKey?: string;
+  customHeaders?: { [key: string]: string };
 }
 
 export interface RequestError {
