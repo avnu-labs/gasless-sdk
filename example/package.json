@@ -11,12 +11,11 @@
     "lint:fix": "tsc --noEmit && prettier --write \"src/**/*.{ts,tsx,js,json,css,yml,md}\" && eslint 'src/**/*.{js,ts,tsx,json}' --quiet --fix"
   },
   "dependencies": {
-    "@avnu/gasless-sdk": "file:../dist",
-    "ethers": "6.13.4",
-    "get-starknet": "3.3.3",
+    "ethers": "6.14.3",
+    "get-starknet": "4.0.0",
     "react": "19.0.0",
     "react-dom": "19.0.0",
-    "starknet": "6.11.0"
+    "starknet": "7.4.0"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "6.6.3",
