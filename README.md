@@ -1,8 +1,12 @@
-# GASLESS-SDK
+> [!CAUTION]
+> gasless-sdk has been deprecated. 
+> If you want to use Paymaster on Starknet, it has been integrated on [starknetjs](https://starknetjs.com/docs/next/guides/paymaster) & [starknet-react](https://www.starknet-react.com/docs/hooks/use-paymaster-send-transaction)
+
+## GASLESS-SDK
 
 gasless-sdk is a typeScript SDK allowing you to easily provide gasless transactions to your users
 
-## Installation
+### Installation
 
 ```shell
 npm install @avnu/gasless-sdk
@@ -12,7 +16,7 @@ npm install @avnu/gasless-sdk
 yarn add @avnu/gasless-sdk
 ```
 
-## Usage
+### Usage
 
 ```ts
 // First retrieve the gas token prices
@@ -35,6 +39,6 @@ const gasTokenAddress = gastokenPrices[0].tokenAddress
 await executeCalls(account, calls, { gasTokenAddress, gasTokenPrices, estimatedGasFees })
 ```
 
-## Example
+### Example
 
 This repository includes a basic example in the `[/examples](/examples)` folder.
